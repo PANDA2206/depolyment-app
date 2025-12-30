@@ -1,0 +1,41 @@
+[
+  {
+    "sku": "DRS-GLD-001",
+    "name": "Aurora Silk Evening Gown",
+    "brand": "Lumen Atelier",
+    "price": 680.0,
+    "currency": "USD",
+    "colors": ["gold", "champagne"],
+    "sizes": ["2", "4", "6", "8"],
+    "tags": ["evening", "gala", "statement"],
+    "inventory": 12,
+    "image_url": "https://cdn.example.com/products/aurora-gown.jpg",
+    "description": "Bias-cut silk gown with asymmetric neckline and draped waist." 
+  },
+  {
+    "sku": "JKT-LTH-014",
+    "name": "Noir Moto Leather Jacket",
+    "brand": "Axis Studio",
+    "price": 420.0,
+    "currency": "USD",
+    "colors": ["black"],
+    "sizes": ["XS", "S", "M", "L"],
+    "tags": ["outerwear", "minimal", "street"],
+    "inventory": 25,
+    "image_url": "https://cdn.example.com/products/noir-moto.jpg",
+    "description": "Japanese calf leather jacket with gunmetal hardware." 
+  },
+  {
+    "sku": "FTW-SNK-101",
+    "name": "Eclipse Knit Runner",
+    "brand": "Orbital",
+    "price": 180.0,
+    "currency": "USD",
+    "colors": ["black", "white"],
+    "sizes": ["6", "7", "8", "9", "10"],
+    "tags": ["sneaker", "athleisure"],
+    "inventory": 60,
+    "image_url": "https://cdn.example.com/products/eclipse-runner.jpg",
+    "description": "Featherweight knit sneaker with adaptive cushioning." 
+  }
+]

@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - backend/.env.example
+    environment:
+      - VECTORSTORE_PATH=/srv/app/.data/chroma
+    volumes:
+      - vectorstore-data:/srv/app/.data
+    depends_on:
+      - vectorstore
+    networks:
+      - fashionflow
+
+  vectorstore:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - vectorstore-data:/chroma/.chroma
+    networks:
+      - fashionflow
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    networks:
+      - fashionflow
+
+volumes:
+  vectorstore-data:
+
+networks:
+  fashionflow:
+    driver: bridge

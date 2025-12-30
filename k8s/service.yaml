@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fashionflow-api
+  namespace: fashionflow
+  labels:
+    app: fashionflow
+spec:
+  type: ClusterIP
+  selector:
+    app: fashionflow
+    tier: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
