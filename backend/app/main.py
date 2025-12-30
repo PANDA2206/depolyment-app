@@ -107,9 +107,16 @@ class HuggingFaceInferenceChatModel(BaseChatModel):
         if isinstance(data, list) and data:
             candidate = data[0]
             if isinstance(candidate, dict):
-                return candidate.get("generated_text") or candidate.get("summary_text") or str(candidate)
+                generated = candidate.get("generated_text")
+                summary = candidate.get("summary_text")
+                if generated or summary:
+                    return generated or summary or ""
+                return str(candidate)
         if isinstance(data, dict):
-            return data.get("generated_text") or str(data)
+            generated = data.get("generated_text")
+            if generated:
+                return generated
+            return str(data)
         return "Could not parse Hugging Face response."
 
 
@@ -135,7 +142,11 @@ def _build_llm(settings: Settings) -> BaseChatModel:
             max_new_tokens=settings.huggingface_max_new_tokens,
             base_url=settings.huggingface_base_url,
         )
-    logger.warning("llm.fallback_mock", reason="missing credentials", provider=settings.llm_provider)
+    logger.warning(
+        "llm.fallback_mock",
+        reason="missing credentials",
+        provider=settings.llm_provider,
+    )
     return MockChatModel()
 
 
