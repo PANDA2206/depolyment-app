@@ -18,13 +18,19 @@ class Settings(BaseSettings):
     environment: Literal["dev", "test", "prod"] = "dev"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    llm_provider: Literal["openai", "azure", "mock"] = "mock"
+    llm_provider: Literal["openai", "azure", "huggingface", "mock"] = "huggingface"
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
     azure_openai_api_key: str | None = None
     azure_openai_endpoint: str | None = None
     azure_openai_deployment: str | None = None
+
+    huggingface_api_token: str | None = None
+    huggingface_model: str = "HuggingFaceH4/zephyr-7b-beta"
+    huggingface_max_new_tokens: int = 256
+    huggingface_base_url: str | None = None
+    huggingface_embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     vectorstore_path: Path = Path(".data/chroma")
     vectorstore_collection: str = "fashionflow-products"

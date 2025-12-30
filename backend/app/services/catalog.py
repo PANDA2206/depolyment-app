@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable
 
 from ..schemas import Product
 
@@ -24,7 +24,10 @@ def list_products() -> list[Product]:
     return _load_products()
 
 
-def filter_products(tags: set[str] | None = None, colors: set[str] | None = None) -> Iterable[Product]:
+def filter_products(
+    tags: set[str] | None = None,
+    colors: set[str] | None = None,
+) -> Iterable[Product]:
     for product in _load_products():
         if tags and not (tags & set(product.tags)):
             continue

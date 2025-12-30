@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
 import structlog
 from fastapi import APIRouter, FastAPI
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -37,16 +38,104 @@ class MockChatModel(BaseChatModel):
         return ChatResult(generations=[[generation]])
 
 
+class HuggingFaceInferenceChatModel(BaseChatModel):
+    """Thin wrapper around the Hugging Face Inference API."""
+
+    model_name: str
+
+    def __init__(
+        self,
+        api_token: str,
+        model_name: str,
+        temperature: float = 0.2,
+        max_new_tokens: int = 256,
+        base_url: str | None = None,
+    ) -> None:
+        self.api_token = api_token
+        self.model_name = model_name
+        self.temperature = temperature
+        self.max_new_tokens = max_new_tokens
+        base = (base_url or "https://api-inference.huggingface.co").rstrip("/")
+        self.endpoint = f"{base}/models/{model_name}"
+        self._client = httpx.Client(timeout=60.0)
+
+    @property
+    def _llm_type(self) -> str:
+        return "huggingface-inference"
+
+    def _format_prompt(self, messages: list[BaseMessage]) -> str:
+        segments = []
+        for message in messages:
+            role = getattr(message, "type", "user")
+            content = message.content if isinstance(message.content, str) else str(message.content)
+            segments.append(f"{role.upper()}: {content}")
+        return "\n".join(segments)
+
+    def _generate(  # type: ignore[override]
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any | None = None,
+    ) -> ChatResult:
+        _ = stop, run_manager
+        prompt = self._format_prompt(messages)
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "temperature": self.temperature,
+                "max_new_tokens": self.max_new_tokens,
+                "return_full_text": False,
+            },
+        }
+        headers = {"Authorization": f"Bearer {self.api_token}"}
+        try:
+            response = self._client.post(
+                self.endpoint,
+                json=payload,
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = self._extract_text(data)
+        except httpx.HTTPError as exc:  # pragma: no cover - network edge
+            logger.warning("llm.huggingface_error", error=str(exc))
+            content = "Open-source model unavailable; using fallback rationale."
+        generation = ChatGeneration(message=AIMessage(content=content))
+        return ChatResult(generations=[[generation]])
+
+    def _extract_text(self, data: Any) -> str:
+        if isinstance(data, list) and data:
+            candidate = data[0]
+            if isinstance(candidate, dict):
+                return candidate.get("generated_text") or candidate.get("summary_text") or str(candidate)
+        if isinstance(data, dict):
+            return data.get("generated_text") or str(data)
+        return "Could not parse Hugging Face response."
+
+
 def _build_llm(settings: Settings) -> BaseChatModel:
-    if settings.llm_provider == "azure":
+    if settings.llm_provider == "azure" and settings.azure_openai_api_key:
         return AzureChatOpenAI(
             api_key=settings.azure_openai_api_key,
             azure_endpoint=settings.azure_openai_endpoint or "",
             azure_deployment=settings.azure_openai_deployment or "",
             temperature=0.2,
         )
-    if settings.llm_provider == "openai":
-        return ChatOpenAI(api_key=settings.openai_api_key, model=settings.openai_model, temperature=0.2)
+    if settings.llm_provider == "openai" and settings.openai_api_key:
+        return ChatOpenAI(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            temperature=0.2,
+        )
+    if settings.huggingface_api_token:
+        return HuggingFaceInferenceChatModel(
+            api_token=settings.huggingface_api_token,
+            model_name=settings.huggingface_model,
+            temperature=0.2,
+            max_new_tokens=settings.huggingface_max_new_tokens,
+            base_url=settings.huggingface_base_url,
+        )
+    logger.warning("llm.fallback_mock", reason="missing credentials", provider=settings.llm_provider)
     return MockChatModel()
 
 
@@ -79,7 +168,11 @@ def create_app() -> FastAPI:
             "rule_based": rule_engine,
         }
         app.state.default_strategy = settings.agent_strategy
-        logger.info("application.startup", strategy=settings.agent_strategy, env=settings.environment)
+        logger.info(
+            "application.startup",
+            strategy=settings.agent_strategy,
+            env=settings.environment,
+        )
 
     return app
 

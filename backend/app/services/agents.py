@@ -23,11 +23,16 @@ class TrendScoutAgent:
         profile: RecommendationRequest = state["user_profile"]
         vector_hits = state["vector_hits"]
         prompt = (
-            "You are TrendScout, a fashion analyst. Summarize current trends relevant to the user.\n"
-            f"User goals: {profile.style_goals}. Preferred colors: {profile.preferred_colors}.\n"
+            "You are TrendScout, a fashion analyst."
+            " Summarize current trends relevant to the user.\n"
+            f"User goals: {profile.style_goals}. "
+            f"Preferred colors: {profile.preferred_colors}.\n"
             f"Vector hits: {vector_hits}."
         )
-        summary = self.ctx.llm.invoke(prompt).content if self._can_call_llm() else "Neutral palette tailoring"
+        if self._can_call_llm():
+            summary = self.ctx.llm.invoke(prompt).content
+        else:
+            summary = "Neutral palette tailoring"
         state["trend_insights"] = summary
         return state
 
@@ -44,10 +49,15 @@ class StylistAgent:
         shortlisted: list[Product] = state["shortlist"]
         insights = state.get("trend_insights", "")
         prompt = (
-            "You are a celebrity stylist. Craft outfit rationales for the shortlisted products.\n"
-            f"User data: {profile.model_dump()}. Trend insights: {insights}."
+            "You are a celebrity stylist."
+            " Craft outfit rationales for the shortlisted products.\n"
+            f"User data: {profile.model_dump()}. "
+            f"Trend insights: {insights}."
         )
-        rationale = self.ctx.llm.invoke(prompt).content if self._can_call_llm() else "Perfect for understated glam."
+        if self._can_call_llm():
+            rationale = self.ctx.llm.invoke(prompt).content
+        else:
+            rationale = "Perfect for understated glam."
 
         enriched = []
         for product in shortlisted:

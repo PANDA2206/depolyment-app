@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Sequence
+from collections.abc import Sequence
 
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
@@ -40,6 +40,8 @@ def _build_embeddings(settings: Settings) -> Embeddings:
         )
     if settings.llm_provider == "openai":
         return OpenAIEmbeddings(api_key=settings.openai_api_key)
+    if settings.llm_provider == "huggingface":
+        return HuggingFaceEmbeddings(model_name=settings.huggingface_embedding_model)
     return ConstantEmbeddings()
 
 
@@ -56,19 +58,22 @@ def bootstrap_vector_store(settings: Settings, products: Sequence[Product]) -> C
 
     current = store._collection.count()  # type: ignore[attr-defined]
     if current == 0:
-        documents = [
-            Document(
-                page_content=f"{product.name} {product.description or ''} Tags: {' '.join(product.tags)}",
-                metadata={
-                    "sku": product.sku,
-                    "brand": product.brand,
-                    "price": product.price,
-                    "colors": product.colors,
-                    "tags": product.tags,
-                },
+        documents = []
+        for product in products:
+            tags = " ".join(product.tags)
+            content = f"{product.name} {product.description or ''} Tags: {tags}"
+            documents.append(
+                Document(
+                    page_content=content,
+                    metadata={
+                        "sku": product.sku,
+                        "brand": product.brand,
+                        "price": product.price,
+                        "colors": product.colors,
+                        "tags": product.tags,
+                    },
+                )
             )
-            for product in products
-        ]
         store.add_documents(documents)
         store.persist()
 
